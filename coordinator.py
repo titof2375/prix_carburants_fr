@@ -53,13 +53,22 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             # Get tracker location
             state = self.hass.states.get(tracker_entity)
             if not state:
-                _LOGGER.warning("Tracker %s not found", tracker_entity)
+                _LOGGER.warning("❌ Entity %s not found", tracker_entity)
                 return {"stations": [], "count": 0, "latitude": 0, "longitude": 0}
 
+            # Try to get latitude/longitude from attributes
             lat = state.attributes.get("latitude")
             lon = state.attributes.get("longitude")
+
+            # If not found, try to get from location array
             if lat is None or lon is None:
-                _LOGGER.warning("No location data from tracker")
+                location = state.attributes.get("location")
+                if location and isinstance(location, (list, tuple)) and len(location) >= 2:
+                    lat, lon = location[0], location[1]
+                    _LOGGER.info("✅ Got location from array: %.2f, %.2f", lat, lon)
+
+            if lat is None or lon is None:
+                _LOGGER.warning("❌ No location data from %s (attributes: %s)", tracker_entity, state.attributes)
                 return {"stations": [], "count": 0, "latitude": 0, "longitude": 0}
 
             _LOGGER.info("Fetching stations from %.2f, %.2f", lat, lon)

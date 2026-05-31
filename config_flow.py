@@ -31,12 +31,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("tracker_entity"): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="device_tracker")
-                    ),
+                    vol.Required("tracker_entity"): str,
                     vol.Required("name", default="Prix Carburants"): str,
                     vol.Optional("rayon_km", default="20"): str,
                     vol.Optional("nb_stations", default="5"): str,
                 }
             ),
+            description_placeholders={
+                "tracker_help": "Entity GPS (device_tracker.xxx ou sensor.xxx_location)"
+            },
         )
