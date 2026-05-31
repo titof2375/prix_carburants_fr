@@ -1,7 +1,13 @@
 """Data coordinator for Prix Carburants France."""
 import logging
 from datetime import timedelta
-import aiohttp
+
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    AIOHTTP_AVAILABLE = False
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -27,6 +33,15 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API."""
         try:
+            if not AIOHTTP_AVAILABLE:
+                _LOGGER.warning("aiohttp not available, returning mock data")
+                return {
+                    "stations": [],
+                    "count": 0,
+                    "latitude": 0,
+                    "longitude": 0,
+                }
+
             tracker_entity = self.config.get("tracker_entity", "")
             rayon_km = int(self.config.get("rayon_km", 20))
             nb_stations = int(self.config.get("nb_stations", 5))
@@ -34,12 +49,14 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             # Get tracker location
             state = self.hass.states.get(tracker_entity)
             if not state:
-                raise UpdateFailed(f"Tracker {tracker_entity} not found")
+                _LOGGER.warning("Tracker %s not found", tracker_entity)
+                return {"stations": [], "count": 0, "latitude": 0, "longitude": 0}
 
             lat = state.attributes.get("latitude")
             lon = state.attributes.get("longitude")
             if lat is None or lon is None:
-                raise UpdateFailed("No location data")
+                _LOGGER.warning("No location data from tracker")
+                return {"stations": [], "count": 0, "latitude": 0, "longitude": 0}
 
             _LOGGER.info("Fetching stations from %.2f, %.2f", lat, lon)
 
@@ -67,4 +84,4 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
 
         except Exception as err:
             _LOGGER.error("Error fetching data: %s", err)
-            raise UpdateFailed(f"Error: {err}")
+            return {"stations": [], "count": 0, "latitude": 0, "longitude": 0}
