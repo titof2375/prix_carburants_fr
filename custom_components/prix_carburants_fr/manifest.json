@@ -1,10 +1,12 @@
 {
   "domain": "prix_carburants_fr",
   "name": "Prix des Carburants France",
-  "codeowners": ["@utilisateur"],
+  "codeowners": ["@titof2375"],
   "config_flow": true,
-  "documentation": "https://github.com/utilisateur/prix_carburants_fr",
+  "documentation": "https://github.com/titof2375/prix_carburants_fr",
   "requirements": [],
   "version": "1.0.1",
-  "issue_tracker": "https://github.com/utilisateur/prix_carburants_fr/issues"
+  "issue_tracker": "https://github.com/titof2375/prix_carburants_fr/issues",
+  "iot_class": "cloud_polling",
+  "homeassistant": "2024.1.0"
 }
