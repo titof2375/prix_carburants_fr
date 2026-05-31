@@ -4,8 +4,10 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .coordinator import PrixCarburantsFRCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,44 +18,61 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
+    await coordinator.async_config_entry_first_refresh()
 
-    sensor = PrixCarburantsSensor(
-        entry.entry_id,
-        data.get("name", "Prix Carburants"),
-        data.get("tracker_entity", "unknown"),
-        data.get("rayon_km", "20"),
-        data.get("nb_stations", "5"),
-    )
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    sensor = PrixCarburantsSensor(coordinator, entry.entry_id, entry.data.get("name", "Prix Carburants"))
     async_add_entities([sensor], True)
 
 
-class PrixCarburantsSensor(SensorEntity):
+class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
     """Sensor for Prix Carburants France."""
 
-    def __init__(self, entry_id: str, name: str, tracker: str, rayon: str, nb_stations: str) -> None:
+    def __init__(self, coordinator: PrixCarburantsFRCoordinator, entry_id: str, name: str) -> None:
         """Initialize the sensor."""
+        super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{entry_id}"
         self._attr_name = name
-        self._tracker = tracker
-        self._rayon = rayon
-        self._nb_stations = nb_stations
-        self._state = "waiting"
+        self.entry_id = entry_id
 
     @property
     def state(self) -> str:
         """Return the state."""
-        return self._state
+        if self.coordinator.data.get("error"):
+            return "error"
+        return str(self.coordinator.data.get("nb_stations", 0))
 
     @property
     def extra_state_attributes(self) -> dict:
         """Return extra state attributes."""
-        return {
-            "tracker_entity": self._tracker,
-            "rayon_km": self._rayon,
-            "nb_stations": self._nb_stations,
-            "integration": DOMAIN,
-        }
+        data = self.coordinator.data
+        stations = data.get("stations", [])
+
+        # Format stations
+        stations_list = []
+        for i, station in enumerate(stations[:5], 1):
+            fields = station.get("fields", {})
+            stations_list.append({
+                f"station_{i}_name": fields.get("nom", "N/A"),
+                f"station_{i}_address": f"{fields.get('cp', '')} {fields.get('ville', '')}",
+                f"station_{i}_distance": f"{fields.get('distance', 'N/A')}m",
+            })
+
+        # Merge all dicts
+        attrs = {}
+        for station_dict in stations_list:
+            attrs.update(station_dict)
+
+        attrs.update({
+            "latitude": data.get("latitude"),
+            "longitude": data.get("longitude"),
+            "rayon_km": data.get("rayon_km"),
+            "error": data.get("error"),
+        })
+
+        return attrs
 
     @property
     def icon(self) -> str:
