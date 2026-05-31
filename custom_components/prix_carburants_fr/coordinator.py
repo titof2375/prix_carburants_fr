@@ -43,8 +43,12 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
                 }
 
             tracker_entity = self.config.get("tracker_entity", "")
-            rayon_km = int(self.config.get("rayon_km", 20))
-            nb_stations = int(self.config.get("nb_stations", 5))
+            try:
+                rayon_km = int(self.config.get("rayon_km", 20))
+                nb_stations = int(self.config.get("nb_stations", 5))
+            except (ValueError, TypeError) as err:
+                _LOGGER.error("Invalid rayon_km or nb_stations: %s", err)
+                raise UpdateFailed(f"Invalid configuration: {err}") from err
 
             # Get tracker location
             state = self.hass.states.get(tracker_entity)

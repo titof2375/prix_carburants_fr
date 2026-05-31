@@ -21,7 +21,15 @@ async def async_setup_entry(
     _LOGGER.info("Setting up sensor for %s", entry.entry_id)
 
     # Get coordinator from hass.data (created in __init__.py)
+    if entry.entry_id not in hass.data.get(DOMAIN, {}):
+        _LOGGER.error("Coordinator not found for %s", entry.entry_id)
+        return
+
     coordinator: PrixCarburantsFRCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    if coordinator is None:
+        _LOGGER.error("Coordinator is None for %s", entry.entry_id)
+        return
 
     name = entry.data.get("name", "Prix Carburants")
     sensor = PrixCarburantsSensor(coordinator, entry.entry_id, name)

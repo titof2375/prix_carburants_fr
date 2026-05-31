@@ -24,18 +24,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Ensure hass.data[DOMAIN] exists
     hass.data.setdefault(DOMAIN, {})
 
-    # Create coordinator
-    coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
-
-    # Do first refresh (this is where it can fail)
     try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception as err:
-        _LOGGER.error("Failed to fetch initial data: %s", err)
-        # Continue anyway - sensor will show error state
+        # Create coordinator
+        coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
 
-    # Store coordinator for platform to use
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+        # Do first refresh (this is where it can fail)
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except Exception as err:
+            _LOGGER.error("Failed to fetch initial data: %s", err)
+            # Continue anyway - sensor will show error state
+
+        # Store coordinator for platform to use
+        hass.data[DOMAIN][entry.entry_id] = coordinator
+    except Exception as err:
+        _LOGGER.error("Error creating coordinator: %s", err)
+        # Still create a dummy coordinator so sensor doesn't crash
+        hass.data[DOMAIN][entry.entry_id] = None
+        return False
 
     # Forward to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
