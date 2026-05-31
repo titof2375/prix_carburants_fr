@@ -1,17 +1,18 @@
 """Data coordinator for Prix Carburants France."""
 import logging
 from datetime import timedelta
-from typing import Any
+import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import UPDATE_INTERVAL
-
 _LOGGER = logging.getLogger(__name__)
+
+API_URL = "https://data.economie.gouv.fr/api/records/1.0/search/"
+API_DATASET = "prix-des-carburants-en-france-flux-instantane-v2"
 
 
 class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
-    """Coordinator to fetch data from Prix Carburants API."""
+    """Coordinator to fetch data from API."""
 
     def __init__(self, hass: HomeAssistant, config: dict) -> None:
         """Initialize coordinator."""
@@ -19,11 +20,11 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="prix_carburants_fr",
-            update_interval=timedelta(minutes=UPDATE_INTERVAL),
+            update_interval=timedelta(minutes=10),
         )
         self.config = config
 
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self):
         """Fetch data from API."""
         try:
             tracker_entity = self.config.get("tracker_entity", "")
@@ -33,29 +34,37 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             # Get tracker location
             state = self.hass.states.get(tracker_entity)
             if not state:
-                _LOGGER.warning("Tracker entity %s not found", tracker_entity)
-                return {"stations": [], "count": 0, "error": "Tracker not found"}
+                raise UpdateFailed(f"Tracker {tracker_entity} not found")
 
-            latitude = state.attributes.get("latitude")
-            longitude = state.attributes.get("longitude")
+            lat = state.attributes.get("latitude")
+            lon = state.attributes.get("longitude")
+            if lat is None or lon is None:
+                raise UpdateFailed("No location data")
 
-            if latitude is None or longitude is None:
-                _LOGGER.warning("No location data from tracker")
-                return {"stations": [], "count": 0, "error": "No location"}
+            _LOGGER.info("Fetching stations from %.2f, %.2f", lat, lon)
 
-            _LOGGER.info("Fetching stations from %.2f, %.2f (radius: %d km)", latitude, longitude, rayon_km)
+            # Fetch from API
+            async with aiohttp.ClientSession() as session:
+                params = {
+                    "dataset": API_DATASET,
+                    "rows": 100,
+                    "geofilter.distance": f"{lat},{lon},{rayon_km * 1000}",
+                }
+                async with session.get(API_URL, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status != 200:
+                        raise UpdateFailed(f"API error: {resp.status}")
+                    data = await resp.json()
 
-            # Mock data for testing - in real scenario, fetch from API
-            # For now just return empty to avoid API errors
+            records = data.get("records", [])[:nb_stations]
+            _LOGGER.info("Found %d stations", len(records))
+
             return {
-                "latitude": latitude,
-                "longitude": longitude,
-                "rayon_km": rayon_km,
-                "stations": [],
-                "count": 0,
-                "error": None,
+                "stations": records,
+                "count": len(records),
+                "latitude": lat,
+                "longitude": lon,
             }
 
         except Exception as err:
-            _LOGGER.error("Error updating data: %s", err)
-            return {"stations": [], "count": 0, "error": str(err)}
+            _LOGGER.error("Error fetching data: %s", err)
+            raise UpdateFailed(f"Error: {err}")
