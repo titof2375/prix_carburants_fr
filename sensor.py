@@ -65,6 +65,7 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         self._index = index
 
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_station_{index}"
+        self._attr_name = f"Station {index}"
 
     def _get_station(self) -> dict:
         """Get current station data from coordinator."""
@@ -76,13 +77,6 @@ class StationSensor(CoordinatorEntity, SensorEntity):
             return {}
 
         return stations[self._index - 1]  # Convert 1-indexed to 0-indexed
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        station = self._get_station()
-        fields = station.get("fields", {})
-        return fields.get("nom", f"Station {self._index}")
 
     @property
     def state(self) -> str:
