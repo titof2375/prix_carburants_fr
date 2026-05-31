@@ -11,11 +11,10 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "prix_carburants_fr"
 
 
-class ConfigFlow(config_entries.ConfigFlow):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for prix_carburants_fr."""
 
     VERSION = 1
-    domain = DOMAIN
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
