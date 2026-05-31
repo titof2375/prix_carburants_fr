@@ -3,7 +3,6 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import DOMAIN, CONF_TRACKER_ENTITY, CONF_ZONE_ENTITY, CONF_RAYON_KM, CONF_NB_STATIONS
 
 
 class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -17,7 +16,6 @@ class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title=user_input.get(CONF_TRACKER_ENTITY, "Prix Carburants"),
                 data={
                     CONF_TRACKER_ENTITY: user_input[CONF_TRACKER_ENTITY],
-                    CONF_ZONE_ENTITY: user_input.get(CONF_ZONE_ENTITY),
                     CONF_RAYON_KM: int(user_input.get(CONF_RAYON_KM, 20)),
                     CONF_NB_STATIONS: int(user_input.get(CONF_NB_STATIONS, 5)),
                 },
@@ -28,7 +26,6 @@ class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_TRACKER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="device_tracker")
                 ),
-                vol.Optional(CONF_ZONE_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="zone")
                 ),
                 vol.Required(CONF_RAYON_KM, default=20): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),

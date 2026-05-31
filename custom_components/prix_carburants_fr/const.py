@@ -1,14 +1,13 @@
 DOMAIN = "prix_carburants_fr"
 
 CONF_TRACKER_ENTITY = "tracker_entity"
-CONF_ZONE_ENTITY = "zone_entity"
 CONF_RAYON_KM = "rayon_km"
 CONF_NB_STATIONS = "nb_stations"
 
 API_URL = "https://data.economie.gouv.fr/api/records/1.0/search/"
 API_DATASET = "prix-des-carburants-en-france-flux-instantane-v2"
 
-UPDATE_INTERVAL = 10  # minutes
+UPDATE_INTERVAL = 10
 
 FUEL_TYPES = {
     "Gazole (B7)": "gazole",
