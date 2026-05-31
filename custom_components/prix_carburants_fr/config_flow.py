@@ -3,7 +3,6 @@ import logging
 import voluptuous as vol
 from typing import Any, Dict, Optional
 from homeassistant import config_entries
-from homeassistant.helpers import selector
 from homeassistant.data_entry_flow import FlowResult
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,12 +30,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("name", default="Prix Carburants"): str,
-                    vol.Optional("rayon_km", default=20): vol.All(
-                        vol.Coerce(int), vol.Range(min=1, max=100)
-                    ),
-                    vol.Optional("nb_stations", default=5): vol.All(
-                        vol.Coerce(int), vol.Range(min=1, max=20)
-                    ),
+                    vol.Optional("rayon_km", default="20"): str,
+                    vol.Optional("nb_stations", default="5"): str,
                 }
             ),
         )
