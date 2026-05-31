@@ -3,7 +3,9 @@ import logging
 import voluptuous as vol
 from typing import Any, Dict, Optional
 from homeassistant import config_entries
+from homeassistant.helpers import selector
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +31,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
+                    vol.Required("tracker_entity"): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="device_tracker")
+                    ),
                     vol.Required("name", default="Prix Carburants"): str,
                     vol.Optional("rayon_km", default="20"): str,
                     vol.Optional("nb_stations", default="5"): str,
