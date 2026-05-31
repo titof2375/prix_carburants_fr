@@ -6,6 +6,8 @@ from homeassistant.core import HomeAssistant
 DOMAIN = "prix_carburants_fr"
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS = ["sensor"]
+
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up component."""
@@ -16,11 +18,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entry."""
     hass.data[DOMAIN][entry.entry_id] = entry.data
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload entry."""
-    if entry.entry_id in hass.data[DOMAIN]:
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-    return True
+    return unload_ok
