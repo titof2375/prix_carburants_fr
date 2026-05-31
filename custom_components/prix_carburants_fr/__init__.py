@@ -21,6 +21,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entry."""
     _LOGGER.info("Setting up entry for %s", entry.entry_id)
 
+    # Ensure hass.data[DOMAIN] exists
+    hass.data.setdefault(DOMAIN, {})
+
     # Create coordinator
     coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
 

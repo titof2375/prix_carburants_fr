@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/titof2375/prix_carburants_fr",
   "requirements": [],
-  "version": "2.0.17",
+  "version": "2.0.18",
   "issue_tracker": "https://github.com/titof2375/prix_carburants_fr/issues",
   "iot_class": "cloud_polling",
   "homeassistant": "2024.1.0"
