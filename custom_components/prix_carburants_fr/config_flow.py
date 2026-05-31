@@ -39,9 +39,7 @@ class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow):
             errors=errors,
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(self, config_entry):
         return PrixCarburantsFROptionsFlow(config_entry)
 
 
