@@ -1,5 +1,5 @@
 {
   "name": "Prix des Carburants France",
-  "content_in_root": false,
+  "content_in_root": true,
   "zip_release": false
 }
