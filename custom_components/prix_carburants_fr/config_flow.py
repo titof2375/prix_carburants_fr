@@ -1,3 +1,4 @@
+"""Config flow for Prix Carburants France."""
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
@@ -6,45 +7,49 @@ from .const import DOMAIN, CONF_TRACKER_ENTITY, CONF_RAYON_KM, CONF_NB_STATIONS
 
 
 class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow):
+    """Handle a config flow for Prix Carburants France."""
+
     VERSION = 1
     domain = DOMAIN
 
     async def async_step_user(self, user_input=None):
+        """Handle the initial step."""
         if user_input is not None:
             return self.async_create_entry(
                 title="Prix Carburants France",
                 data=user_input,
             )
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_TRACKER_ENTITY): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="device_tracker")
-                    ),
-                    vol.Optional(CONF_RAYON_KM, default=20): vol.All(
-                        vol.Coerce(int), vol.Range(min=1, max=100)
-                    ),
-                    vol.Optional(CONF_NB_STATIONS, default=5): vol.All(
-                        vol.Coerce(int), vol.Range(min=1, max=20)
-                    ),
-                }
-            ),
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_TRACKER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="device_tracker")
+                ),
+                vol.Optional(CONF_RAYON_KM, default=20): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=100)
+                ),
+                vol.Optional(CONF_NB_STATIONS, default=5): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=20)
+                ),
+            }
         )
 
-    async def async_step_import(self, import_data):
-        return await self.async_step_user(import_data)
+        return self.async_show_form(step_id="user", data_schema=schema)
 
     def async_get_options_flow(self, config_entry):
-        return PrixCarburantsFROptionsFlow(config_entry)
+        """Return the options flow."""
+        return OptionsFlowHandler(config_entry)
 
 
-class PrixCarburantsFROptionsFlow(config_entries.OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options."""
+
     def __init__(self, config_entry):
+        """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 

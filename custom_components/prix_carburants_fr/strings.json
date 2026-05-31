@@ -3,11 +3,11 @@
     "step": {
       "user": {
         "title": "Configuration Prix Carburants France",
-        "description": "Sélectionnez une entité de localisation et configurez les paramètres",
+        "description": "Configurez votre intégration Prix Carburants France",
         "data": {
-          "tracker_entity": "Entité de localisation (Device Tracker)",
+          "tracker_entity": "Entité de localisation",
           "rayon_km": "Rayon de recherche (km)",
-          "nb_stations": "Nombre de stations à afficher"
+          "nb_stations": "Nombre de stations"
         }
       }
     }
@@ -15,10 +15,10 @@
   "options": {
     "step": {
       "init": {
-        "title": "Options Prix Carburants France",
+        "title": "Options",
         "data": {
           "rayon_km": "Rayon de recherche (km)",
-          "nb_stations": "Nombre de stations à afficher"
+          "nb_stations": "Nombre de stations"
         }
       }
     }
