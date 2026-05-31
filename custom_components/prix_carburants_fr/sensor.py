@@ -18,24 +18,30 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    _LOGGER.info("Setting up sensor for %s", entry.entry_id)
+    _LOGGER.info("🎨 sensor.async_setup_entry START for %s", entry.entry_id)
+
+    # Debug: show what's in hass.data
+    _LOGGER.info("🔍 hass.data[DOMAIN] = %s", hass.data.get(DOMAIN, {}))
+    _LOGGER.info("🔍 Looking for entry_id: %s", entry.entry_id)
+    _LOGGER.info("🔍 Available keys: %s", list(hass.data.get(DOMAIN, {}).keys()))
 
     # Get coordinator from hass.data (created in __init__.py)
     if entry.entry_id not in hass.data.get(DOMAIN, {}):
-        _LOGGER.error("Coordinator not found for %s", entry.entry_id)
+        _LOGGER.error("❌ Coordinator not found for %s. Keys: %s", entry.entry_id, list(hass.data.get(DOMAIN, {}).keys()))
         return
 
     coordinator: PrixCarburantsFRCoordinator = hass.data[DOMAIN][entry.entry_id]
+    _LOGGER.info("✅ Got coordinator: %s", coordinator)
 
     if coordinator is None:
-        _LOGGER.error("Coordinator is None for %s", entry.entry_id)
+        _LOGGER.error("❌ Coordinator is None for %s", entry.entry_id)
         return
 
     name = entry.data.get("name", "Prix Carburants")
     sensor = PrixCarburantsSensor(coordinator, entry.entry_id, name)
     async_add_entities([sensor], True)
 
-    _LOGGER.info("Sensor created: %s", sensor.entity_id)
+    _LOGGER.info("✅ Sensor created: %s", sensor.entity_id)
 
 
 class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
