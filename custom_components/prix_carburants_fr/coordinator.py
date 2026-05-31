@@ -7,7 +7,7 @@ import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_URL, API_DATASET, UPDATE_INTERVAL, FUEL_TYPES, CONF_TRACKER_ENTITY, CONF_ZONE_ENTITY
+from .const import API_URL, API_DATASET, UPDATE_INTERVAL, FUEL_TYPES, CONF_TRACKER_ENTITY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self.config = config
         self.tracker_entity = config.get(CONF_TRACKER_ENTITY)
-        self.zone_entity = config.get(CONF_ZONE_ENTITY)
         self.rayon = config.get("rayon_km", 20)
         self.nb_stations = config.get("nb_stations", 5)
 
@@ -48,14 +47,6 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             if not tracker_lat or not tracker_lon:
                 raise UpdateFailed(f"Entity missing lat/lon")
 
-            zone_lat = None
-            zone_lon = None
-            if self.zone_entity:
-                zone_state = self.hass.states.get(self.zone_entity)
-                if zone_state:
-                    zone_lat = zone_state.attributes.get("latitude")
-                    zone_lon = zone_state.attributes.get("longitude")
-
             async with aiohttp.ClientSession() as session:
                 stations = await self._fetch_stations(session, tracker_lat, tracker_lon)
 
@@ -64,9 +55,6 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
                     "tracker_entity": self.tracker_entity,
                     "tracker_lat": tracker_lat,
                     "tracker_lon": tracker_lon,
-                    "zone_entity": self.zone_entity,
-                    "zone_lat": zone_lat,
-                    "zone_lon": zone_lon,
                 }
         except Exception as err:
             raise UpdateFailed(f"Error: {err}")

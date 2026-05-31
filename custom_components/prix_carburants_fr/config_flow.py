@@ -6,7 +6,8 @@ from homeassistant.helpers import selector
 from .const import DOMAIN, CONF_TRACKER_ENTITY, CONF_RAYON_KM, CONF_NB_STATIONS
 
 
-class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class PrixCarburantsFRConfigFlow(config_entries.ConfigFlow):
+    domain = DOMAIN
     VERSION = 1
 
     async def async_step_user(self, user_input=None):

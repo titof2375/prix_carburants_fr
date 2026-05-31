@@ -63,12 +63,7 @@ class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
             "tracker_lat": self.coordinator.data.get("tracker_lat"),
             "tracker_lon": self.coordinator.data.get("tracker_lon"),
         }
-        
-        if self.coordinator.zone_entity:
-            attrs["zone_entity"] = self.coordinator.zone_entity
-            attrs["zone_lat"] = self.coordinator.data.get("zone_lat")
-            attrs["zone_lon"] = self.coordinator.data.get("zone_lon")
-        
+
         # Ajouter chaque station en attribut
         stations = self.coordinator.data.get("stations", [])
         for idx, station in enumerate(stations):
