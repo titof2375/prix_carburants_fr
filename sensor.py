@@ -32,47 +32,75 @@ async def async_setup_entry(
         _LOGGER.error("❌ Coordinator is None")
         return
 
-    name = entry.data.get("name", "Prix Carburants")
-    sensor = PrixCarburantsSensor(coordinator, entry.entry_id, name)
-    async_add_entities([sensor], True)
+    # Create one sensor per station
+    sensors = []
 
-    _LOGGER.warning("✅✅✅ SENSOR CREATED AND ADDED!")
+    if coordinator.last_update_success:
+        stations = coordinator.data.get("stations", [])
+        _LOGGER.warning("🎨 Creating %d station sensors...", len(stations))
+
+        for i, station in enumerate(stations, 1):
+            sensor = StationSensor(coordinator, entry.entry_id, station, i)
+            sensors.append(sensor)
+            _LOGGER.warning("🎨 Created sensor for station %d", i)
+
+    if sensors:
+        async_add_entities(sensors, True)
+        _LOGGER.warning("✅✅✅ %d STATION SENSORS CREATED AND ADDED!", len(sensors))
+    else:
+        _LOGGER.warning("⚠️ No stations found to create sensors")
 
 
-class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
-    """Sensor for Prix Carburants France."""
+class StationSensor(CoordinatorEntity, SensorEntity):
+    """Sensor for a single fuel station."""
 
     def __init__(
-        self, coordinator: PrixCarburantsFRCoordinator, entry_id: str, name: str
+        self,
+        coordinator: PrixCarburantsFRCoordinator,
+        entry_id: str,
+        station: dict,
+        index: int,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"{DOMAIN}_sensor_{entry_id}"
-        self._attr_name = name
+        self._station = station
+        self._index = index
+
+        fields = station.get("fields", {})
+        station_name = fields.get("nom", f"Station {index}")
+
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_station_{index}"
+        self._attr_name = station_name
 
     @property
     def state(self) -> str:
-        """Return the state - number of stations."""
-        if self.coordinator.last_update_success:
-            count = self.coordinator.data.get("count", 0)
-            return f"{count} stations"
-        return "error"
+        """Return the state - station address."""
+        if not self.coordinator.last_update_success:
+            return "error"
+
+        fields = self._station.get("fields", {})
+        cp = fields.get("cp", "")
+        ville = fields.get("ville", "")
+        return f"{cp} {ville}".strip()
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Return attributes with station details."""
+        """Return attributes with full station details."""
         if not self.coordinator.last_update_success:
             return {"error": "No data"}
 
-        stations = self.coordinator.data.get("stations", [])
-        attrs = {"count": len(stations)}
+        fields = self._station.get("fields", {})
 
-        # Add each station
-        for i, station in enumerate(stations, 1):
-            fields = station.get("fields", {})
-            attrs[f"station_{i}_name"] = fields.get("nom", "N/A")
-            attrs[f"station_{i}_address"] = f"{fields.get('cp', '')} {fields.get('ville', '')}"
-            attrs[f"station_{i}_distance"] = f"{fields.get('distance', 0):.0f}m"
+        attrs = {
+            "name": fields.get("nom", "N/A"),
+            "address": fields.get("adresse", "N/A"),
+            "postal_code": fields.get("cp", "N/A"),
+            "city": fields.get("ville", "N/A"),
+            "distance_m": f"{fields.get('distance', 0):.0f}",
+            "latitude": fields.get("latitude", "N/A"),
+            "longitude": fields.get("longitude", "N/A"),
+            "index": self._index,
+        }
 
         return attrs
 
