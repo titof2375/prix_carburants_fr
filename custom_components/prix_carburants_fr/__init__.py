@@ -3,8 +3,6 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .coordinator import PrixCarburantsFRCoordinator
-
 DOMAIN = "prix_carburants_fr"
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,12 +17,11 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entry."""
-    coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    _LOGGER.info("Setting up entry for %s", entry.entry_id)
+    hass.data[DOMAIN][entry.entry_id] = entry.data
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _LOGGER.info("Entry setup complete for %s", entry.entry_id)
     return True
 
 
