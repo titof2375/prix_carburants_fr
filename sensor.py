@@ -1,5 +1,4 @@
 """Sensor for Prix Carburants France."""
-import asyncio
 import logging
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -21,25 +20,16 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     _LOGGER.warning("🎨 sensor.async_setup_entry START for %s", entry.entry_id)
 
-    # Wait for coordinator to be available (race condition fix)
-    max_attempts = 50
-    for attempt in range(max_attempts):
-        if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
-            _LOGGER.warning("✅ Coordinator found on attempt %d", attempt + 1)
-            break
-        if attempt > 0:
-            _LOGGER.warning("⏳ Waiting for coordinator (attempt %d/%d)...", attempt + 1, max_attempts)
-            await asyncio.sleep(0.1)
-    else:
-        _LOGGER.error("❌ Coordinator timeout! Keys: %s", list(hass.data.get(DOMAIN, {}).keys()))
+    # Get coordinator from entry.runtime_data (Home Assistant way!)
+    if not entry.runtime_data or "coordinator" not in entry.runtime_data:
+        _LOGGER.error("❌ Coordinator not in entry.runtime_data!")
         return
 
-    # Get coordinator from hass.data (created in __init__.py)
-    coordinator: PrixCarburantsFRCoordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.warning("✅ Got coordinator!")
+    coordinator: PrixCarburantsFRCoordinator = entry.runtime_data["coordinator"]
+    _LOGGER.warning("✅ Got coordinator from entry.runtime_data!")
 
     if coordinator is None:
-        _LOGGER.error("❌ Coordinator is None for %s", entry.entry_id)
+        _LOGGER.error("❌ Coordinator is None")
         return
 
     name = entry.data.get("name", "Prix Carburants")
