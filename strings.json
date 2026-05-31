@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration Prix Carburants France",
+        "description": "Entrez vos paramètres GPS et préférences",
+        "data": {
+          "gps_maison_lat": "Latitude Maison",
+          "gps_maison_lon": "Longitude Maison",
+          "gps_phone_lat": "Latitude Téléphone",
+          "gps_phone_lon": "Longitude Téléphone",
+          "rayon_km": "Rayon de recherche (km)",
+          "nb_stations": "Nombre de stations à afficher"
+        }
+      }
+    },
+    "error": {
+      "invalid_gps": "Coordonnées GPS invalides",
+      "invalid_gps_maison": "Coordonnées GPS maison invalides",
+      "invalid_gps_phone": "Coordonnées GPS téléphone invalides"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Prix Carburants France",
+        "data": {
+          "gps_maison_lat": "Latitude Maison",
+          "gps_maison_lon": "Longitude Maison",
+          "gps_phone_lat": "Latitude Téléphone",
+          "gps_phone_lon": "Longitude Téléphone",
+          "rayon_km": "Rayon de recherche (km)",
+          "nb_stations": "Nombre de stations à afficher"
+        }
+      }
+    }
+  }
+}

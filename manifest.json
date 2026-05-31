@@ -1,0 +1,10 @@
+{
+  "domain": "prix_carburants_fr",
+  "name": "Prix des Carburants France",
+  "codeowners": ["@utilisateur"],
+  "config_flow": true,
+  "documentation": "https://github.com/utilisateur/prix_carburants_fr",
+  "requirements": [],
+  "version": "1.0.0",
+  "issue_tracker": "https://github.com/utilisateur/prix_carburants_fr/issues"
+}
