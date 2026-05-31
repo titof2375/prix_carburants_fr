@@ -1,6 +1,6 @@
 """Constants for Prix Carburants France integration."""
 
-DOMAIN = "prix_carburants_fr"
+DOMAIN = "carburants_prix_test"
 
 CONF_TRACKER_ENTITY = "tracker_entity"
 CONF_RAYON_KM = "rayon_km"

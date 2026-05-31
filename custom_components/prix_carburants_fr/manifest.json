@@ -1,5 +1,5 @@
 {
-  "domain": "prix_carburants_fr",
+  "domain": "carburants_prix_test",
   "name": "Prix des Carburants France",
   "codeowners": ["@titof2375"],
   "config_flow": true,
