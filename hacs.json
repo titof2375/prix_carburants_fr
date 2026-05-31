@@ -1,6 +1,5 @@
 {
   "name": "Prix des Carburants France",
   "content_in_root": false,
-  "zip_release": true,
-  "filename": "prix_carburants_fr.zip"
+  "zip_release": false
 }
