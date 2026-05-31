@@ -40,7 +40,7 @@ async def async_setup_entry(
         _LOGGER.warning("🎨 Creating %d station sensors...", len(stations))
 
         for i, station in enumerate(stations, 1):
-            sensor = StationSensor(coordinator, entry.entry_id, station, i)
+            sensor = StationSensor(coordinator, entry.entry_id, i)
             sensors.append(sensor)
             _LOGGER.warning("🎨 Created sensor for station %d", i)
 
@@ -58,19 +58,31 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         self,
         coordinator: PrixCarburantsFRCoordinator,
         entry_id: str,
-        station: dict,
         index: int,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._station = station
         self._index = index
 
-        fields = station.get("fields", {})
-        station_name = fields.get("nom", f"Station {index}")
-
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_station_{index}"
-        self._attr_name = station_name
+
+    def _get_station(self) -> dict:
+        """Get current station data from coordinator."""
+        if not self.coordinator.last_update_success:
+            return {}
+
+        stations = self.coordinator.data.get("stations", [])
+        if self._index > len(stations) or self._index < 1:
+            return {}
+
+        return stations[self._index - 1]  # Convert 1-indexed to 0-indexed
+
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        station = self._get_station()
+        fields = station.get("fields", {})
+        return fields.get("nom", f"Station {self._index}")
 
     @property
     def state(self) -> str:
@@ -78,7 +90,11 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.last_update_success:
             return "error"
 
-        fields = self._station.get("fields", {})
+        station = self._get_station()
+        if not station:
+            return "error"
+
+        fields = station.get("fields", {})
         cp = fields.get("cp", "")
         ville = fields.get("ville", "")
         return f"{cp} {ville}".strip()
@@ -89,7 +105,16 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.last_update_success:
             return {"error": "No data"}
 
-        fields = self._station.get("fields", {})
+        station = self._get_station()
+        if not station:
+            return {"error": "Station not found"}
+
+        fields = station.get("fields", {})
+
+        # Format last update time
+        last_updated = "N/A"
+        if self.coordinator.last_update_success_time:
+            last_updated = self.coordinator.last_update_success_time.strftime("%d/%m/%Y %H:%M:%S")
 
         attrs = {
             "name": fields.get("nom", "N/A"),
@@ -99,6 +124,7 @@ class StationSensor(CoordinatorEntity, SensorEntity):
             "distance_m": f"{fields.get('distance', 0):.0f}",
             "latitude": fields.get("latitude", "N/A"),
             "longitude": fields.get("longitude", "N/A"),
+            "last_updated": last_updated,
             "index": self._index,
         }
 
