@@ -1,4 +1,5 @@
 """Sensor for Prix Carburants France."""
+import asyncio
 import logging
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -18,20 +19,24 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    _LOGGER.info("🎨 sensor.async_setup_entry START for %s", entry.entry_id)
+    _LOGGER.warning("🎨 sensor.async_setup_entry START for %s", entry.entry_id)
 
-    # Debug: show what's in hass.data
-    _LOGGER.info("🔍 hass.data[DOMAIN] = %s", hass.data.get(DOMAIN, {}))
-    _LOGGER.info("🔍 Looking for entry_id: %s", entry.entry_id)
-    _LOGGER.info("🔍 Available keys: %s", list(hass.data.get(DOMAIN, {}).keys()))
-
-    # Get coordinator from hass.data (created in __init__.py)
-    if entry.entry_id not in hass.data.get(DOMAIN, {}):
-        _LOGGER.error("❌ Coordinator not found for %s. Keys: %s", entry.entry_id, list(hass.data.get(DOMAIN, {}).keys()))
+    # Wait for coordinator to be available (race condition fix)
+    max_attempts = 50
+    for attempt in range(max_attempts):
+        if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
+            _LOGGER.warning("✅ Coordinator found on attempt %d", attempt + 1)
+            break
+        if attempt > 0:
+            _LOGGER.warning("⏳ Waiting for coordinator (attempt %d/%d)...", attempt + 1, max_attempts)
+            await asyncio.sleep(0.1)
+    else:
+        _LOGGER.error("❌ Coordinator timeout! Keys: %s", list(hass.data.get(DOMAIN, {}).keys()))
         return
 
+    # Get coordinator from hass.data (created in __init__.py)
     coordinator: PrixCarburantsFRCoordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.info("✅ Got coordinator: %s", coordinator)
+    _LOGGER.warning("✅ Got coordinator!")
 
     if coordinator is None:
         _LOGGER.error("❌ Coordinator is None for %s", entry.entry_id)
@@ -41,7 +46,7 @@ async def async_setup_entry(
     sensor = PrixCarburantsSensor(coordinator, entry.entry_id, name)
     async_add_entities([sensor], True)
 
-    _LOGGER.info("✅ Sensor created: %s", sensor.entity_id)
+    _LOGGER.warning("✅✅✅ SENSOR CREATED AND ADDED!")
 
 
 class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
