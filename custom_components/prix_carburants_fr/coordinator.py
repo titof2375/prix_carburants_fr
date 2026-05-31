@@ -7,13 +7,12 @@ import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_URL, API_DATASET, UPDATE_INTERVAL, FUEL_TYPES
+from .const import API_URL, API_DATASET, UPDATE_INTERVAL, FUEL_TYPES, CONF_TRACKER_ENTITY, CONF_ZONE_ENTITY
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def haversine(lat1, lon1, lat2, lon2):
-    """Calculate distance between two GPS points in km."""
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -30,49 +29,59 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             name="Prix Carburants France",
             update_interval=timedelta(minutes=UPDATE_INTERVAL),
         )
+        self.hass = hass
         self.config = config
-        self.gps_maison = (config.get("gps_maison_lat"), config.get("gps_maison_lon"))
-        self.gps_phone = (config.get("gps_phone_lat"), config.get("gps_phone_lon"))
+        self.tracker_entity = config.get(CONF_TRACKER_ENTITY)
+        self.zone_entity = config.get(CONF_ZONE_ENTITY)
         self.rayon = config.get("rayon_km", 20)
         self.nb_stations = config.get("nb_stations", 5)
 
     async def _async_update_data(self) -> Dict[str, Any]:
-        """Fetch data from API."""
         try:
-            async with aiohttp.ClientSession() as session:
-                # Fetch data near phone GPS
-                stations_phone = await self._fetch_stations(session, self.gps_phone)
+            tracker_state = self.hass.states.get(self.tracker_entity)
+            if not tracker_state:
+                raise UpdateFailed(f"Entity {self.tracker_entity} not found")
 
-                # Fetch data near home GPS
-                stations_maison = await self._fetch_stations(session, self.gps_maison)
+            tracker_lat = tracker_state.attributes.get("latitude")
+            tracker_lon = tracker_state.attributes.get("longitude")
+
+            if not tracker_lat or not tracker_lon:
+                raise UpdateFailed(f"Entity missing lat/lon")
+
+            zone_lat = None
+            zone_lon = None
+            if self.zone_entity:
+                zone_state = self.hass.states.get(self.zone_entity)
+                if zone_state:
+                    zone_lat = zone_state.attributes.get("latitude")
+                    zone_lon = zone_state.attributes.get("longitude")
+
+            async with aiohttp.ClientSession() as session:
+                stations = await self._fetch_stations(session, tracker_lat, tracker_lon)
 
                 return {
-                    "stations_phone": stations_phone,
-                    "stations_maison": stations_maison,
+                    "stations": stations,
+                    "tracker_entity": self.tracker_entity,
+                    "tracker_lat": tracker_lat,
+                    "tracker_lon": tracker_lon,
+                    "zone_entity": self.zone_entity,
+                    "zone_lat": zone_lat,
+                    "zone_lon": zone_lon,
                 }
         except Exception as err:
-            raise UpdateFailed(f"Error updating data: {err}")
+            raise UpdateFailed(f"Error: {err}")
 
-    async def _fetch_stations(self, session: aiohttp.ClientSession, gps: tuple) -> List[Dict]:
-        """Fetch stations near GPS coordinates."""
-        lat, lon = gps
-
-        params = {
-            "dataset": API_DATASET,
-            "q": "",
-            "limit": 100,
-        }
+    async def _fetch_stations(self, session, lat: float, lon: float) -> List[Dict]:
+        params = {"dataset": API_DATASET, "q": "", "limit": 100}
 
         async with session.get(API_URL, params=params) as resp:
             if resp.status != 200:
-                raise UpdateFailed(f"API returned {resp.status}")
+                raise UpdateFailed(f"API error {resp.status}")
 
             data = await resp.json()
-            records = data.get("records", [])
-
-            # Filter by radius and sort by price
             filtered = []
-            for record in records:
+
+            for record in data.get("records", []):
                 try:
                     fields = record.get("fields", {})
                     st_lat = fields.get("latitude")
@@ -85,7 +94,6 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
                     if distance > self.rayon:
                         continue
 
-                    # Extract fuel prices
                     fuels = {}
                     for fuel_name, fuel_key in FUEL_TYPES.items():
                         price_key = f"prix_{fuel_key}"
@@ -106,10 +114,7 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
                         "updated_at": fields.get("date_maj", "N/A"),
                     })
                 except Exception as e:
-                    _LOGGER.warning(f"Error processing station: {e}")
-                    continue
+                    _LOGGER.warning(f"Station error: {e}")
 
-            # Sort by average price of Gazole
             filtered.sort(key=lambda x: float(x["fuels"].get("gazole", {}).get("price", 999)))
-
             return filtered[:self.nb_stations]

@@ -1,9 +1,7 @@
 DOMAIN = "prix_carburants_fr"
 
-CONF_GPS_MAISON_LAT = "gps_maison_lat"
-CONF_GPS_MAISON_LON = "gps_maison_lon"
-CONF_GPS_PHONE_LAT = "gps_phone_lat"
-CONF_GPS_PHONE_LON = "gps_phone_lon"
+CONF_TRACKER_ENTITY = "tracker_entity"
+CONF_ZONE_ENTITY = "zone_entity"
 CONF_RAYON_KM = "rayon_km"
 CONF_NB_STATIONS = "nb_stations"
 

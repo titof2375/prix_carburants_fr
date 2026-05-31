@@ -18,105 +18,76 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up sensors."""
     coordinator: PrixCarburantsFRCoordinator = hass.data[DOMAIN][entry.entry_id]
-
-    entities = []
-
-    # Phone location sensors
-    if coordinator.data.get("stations_phone"):
-        for idx, station in enumerate(coordinator.data["stations_phone"]):
-            entities.append(
-                PrixCarburantsSensor(
-                    coordinator,
-                    entry.entry_id,
-                    station,
-                    location="phone",
-                    index=idx,
-                )
-            )
-
-    # Home location sensors
-    if coordinator.data.get("stations_maison"):
-        for idx, station in enumerate(coordinator.data["stations_maison"]):
-            entities.append(
-                PrixCarburantsSensor(
-                    coordinator,
-                    entry.entry_id,
-                    station,
-                    location="maison",
-                    index=idx,
-                )
-            )
-
-    async_add_entities(entities, True)
+    
+    entity = PrixCarburantsSensor(coordinator, entry.entry_id, entry.title)
+    async_add_entities([entity], True)
 
 
 class PrixCarburantsSensor(CoordinatorEntity, SensorEntity):
-    def __init__(
-        self,
-        coordinator: PrixCarburantsFRCoordinator,
-        entry_id: str,
-        station: Dict[str, Any],
-        location: str,
-        index: int,
-    ) -> None:
+    def __init__(self, coordinator: PrixCarburantsFRCoordinator, entry_id: str, title: str) -> None:
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.entry_id = entry_id
-        self.station = station
-        self.location = location
-        self.index = index
-        self._attr_unique_id = f"{DOMAIN}_{location}_{index}"
+        self.title = title
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}"
 
     @property
     def name(self) -> str:
-        """Return the name of the sensor."""
-        return f"{self.station['name']} ({self.location})"
+        return self.title
 
     @property
     def state(self) -> str | None:
-        """Return the state."""
-        # Get cheapest fuel price
+        stations = self.coordinator.data.get("stations", [])
+        if not stations:
+            return "N/A"
+        
         min_price = None
-        for fuel_data in self.station.get("fuels", {}).values():
-            price = fuel_data.get("price")
-            if price:
-                try:
-                    price_float = float(price)
-                    if min_price is None or price_float < min_price:
-                        min_price = price_float
-                except (ValueError, TypeError):
-                    continue
+        for station in stations:
+            for fuel_data in station.get("fuels", {}).values():
+                price = fuel_data.get("price")
+                if price:
+                    try:
+                        price_float = float(price)
+                        if min_price is None or price_float < min_price:
+                            min_price = price_float
+                    except (ValueError, TypeError):
+                        continue
+        
         return f"{min_price:.3f}" if min_price else "N/A"
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
-        """Return attributes."""
         attrs = {
-            "nom_station": self.station.get("name"),
-            "marque": self.station.get("brand"),
-            "adresse": self.station.get("address"),
-            "latitude": self.station.get("latitude"),
-            "longitude": self.station.get("longitude"),
-            "distance_km": self.station.get("distance"),
-            "derniere_maj": self.station.get("updated_at"),
-            "location": self.location,
+            "tracker_entity": self.coordinator.tracker_entity,
+            "tracker_lat": self.coordinator.data.get("tracker_lat"),
+            "tracker_lon": self.coordinator.data.get("tracker_lon"),
         }
-
-        # Add all fuel prices
-        for fuel_name, fuel_data in self.station.get("fuels", {}).items():
-            attrs[f"prix_{fuel_name}"] = fuel_data.get("price")
-            attrs[f"date_{fuel_name}"] = fuel_data.get("date")
+        
+        if self.coordinator.zone_entity:
+            attrs["zone_entity"] = self.coordinator.zone_entity
+            attrs["zone_lat"] = self.coordinator.data.get("zone_lat")
+            attrs["zone_lon"] = self.coordinator.data.get("zone_lon")
+        
+        # Ajouter chaque station en attribut
+        stations = self.coordinator.data.get("stations", [])
+        for idx, station in enumerate(stations):
+            attrs[f"station_{idx+1}_name"] = station.get("name")
+            attrs[f"station_{idx+1}_brand"] = station.get("brand")
+            attrs[f"station_{idx+1}_address"] = station.get("address")
+            attrs[f"station_{idx+1}_distance_km"] = station.get("distance")
+            
+            # Prix des carburants
+            for fuel_key, fuel_data in station.get("fuels", {}).items():
+                attrs[f"station_{idx+1}_{fuel_key}_price"] = fuel_data.get("price")
+                attrs[f"station_{idx+1}_{fuel_key}_date"] = fuel_data.get("date")
 
         return attrs
 
     @property
     def unit_of_measurement(self) -> str:
-        """Return unit."""
         return "€/L"
 
     @property
     def icon(self) -> str:
-        """Return icon."""
         return "mdi:gas-cylinder"
