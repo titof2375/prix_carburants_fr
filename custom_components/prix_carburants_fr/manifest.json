@@ -5,6 +5,6 @@
   "config_flow": true,
   "documentation": "https://github.com/utilisateur/prix_carburants_fr",
   "requirements": [],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "issue_tracker": "https://github.com/utilisateur/prix_carburants_fr/issues"
 }
