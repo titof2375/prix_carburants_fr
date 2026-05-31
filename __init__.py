@@ -30,11 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.warning("⚠️⚠️⚠️ async_setup_entry CALLED for %s", entry.entry_id)
 
     try:
-        # Ensure hass.data[DOMAIN] exists
-        hass.data.setdefault(DOMAIN, {})
-        _LOGGER.warning("✅ hass.data initialized")
-
-        # Create coordinator
+        # Create coordinator FIRST (before any setdefault that might reset)
         _LOGGER.warning("📍 Creating coordinator...")
         coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
         _LOGGER.warning("✅ Coordinator created")
@@ -47,15 +43,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as err:
             _LOGGER.error("❌ First refresh failed: %s", err)
 
-        # Store coordinator
-        _LOGGER.warning("💾 Storing coordinator...")
-        hass.data[DOMAIN][entry.entry_id] = coordinator
-        _LOGGER.warning("✅ Coordinator STORED in hass.data")
+        # Initialize hass.data[DOMAIN] ONLY if it doesn't exist
+        if DOMAIN not in hass.data:
+            hass.data[DOMAIN] = {}
+            _LOGGER.warning("✅ Created hass.data[DOMAIN]")
+        else:
+            _LOGGER.warning("✅ hass.data[DOMAIN] already exists")
 
-        # Forward to platforms
+        # Store coordinator
+        _LOGGER.warning("💾 Storing coordinator for %s...", entry.entry_id)
+        hass.data[DOMAIN][entry.entry_id] = coordinator
+        _LOGGER.warning("✅ Coordinator STORED. Keys now: %s", list(hass.data[DOMAIN].keys()))
+
+        # Forward to platforms AFTER storing coordinator
         _LOGGER.warning("⏭️ Forwarding to platforms...")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-        _LOGGER.warning("✅ SETUP COMPLETE!")
+        _LOGGER.warning("✅ SETUP COMPLETE! Final keys: %s", list(hass.data[DOMAIN].keys()))
         return True
 
     except Exception as err:
