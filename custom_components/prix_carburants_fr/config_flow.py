@@ -1,22 +1,26 @@
-"""Config flow for Prix Carburants France."""
+"""Config flow for prix_carburants_fr."""
+import logging
 import voluptuous as vol
+from typing import Any, Dict, Optional
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-from typing import Any, Dict, Optional
+from homeassistant.data_entry_flow import FlowResult
+
+_LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "prix_carburants_fr"
 
 
 class ConfigFlow(config_entries.ConfigFlow):
-    """Handle a config flow."""
+    """Config flow for prix_carburants_fr."""
 
     VERSION = 1
     domain = DOMAIN
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Handle user step."""
+    ) -> FlowResult:
+        """Handle a user step."""
         if user_input is not None:
             return self.async_create_entry(
                 title="Prix Carburants France",
