@@ -1,5 +1,6 @@
 """Sensor for Prix Carburants France."""
 import logging
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -18,37 +19,49 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    _LOGGER.warning("🎨 sensor.async_setup_entry START for %s", entry.entry_id)
-
-    # Get coordinator from entry.runtime_data (Home Assistant way!)
     if not entry.runtime_data or "coordinator" not in entry.runtime_data:
-        _LOGGER.error("❌ Coordinator not in entry.runtime_data!")
+        _LOGGER.error("Coordinator not in entry.runtime_data!")
         return
 
     coordinator: PrixCarburantsFRCoordinator = entry.runtime_data["coordinator"]
-    _LOGGER.warning("✅ Got coordinator from entry.runtime_data!")
-
     if coordinator is None:
-        _LOGGER.error("❌ Coordinator is None")
+        _LOGGER.error("Coordinator is None")
         return
 
-    # Create one sensor per station
     sensors = []
-
     if coordinator.last_update_success:
         stations = coordinator.data.get("stations", [])
-        _LOGGER.warning("🎨 Creating %d station sensors...", len(stations))
-
+        _LOGGER.debug("Creating %d station sensors...", len(stations))
         for i, station in enumerate(stations, 1):
-            sensor = StationSensor(coordinator, entry.entry_id, i)
-            sensors.append(sensor)
-            _LOGGER.warning("🎨 Created sensor for station %d", i)
+            sensors.append(StationSensor(coordinator, entry.entry_id, i))
 
     if sensors:
         async_add_entities(sensors, True)
-        _LOGGER.warning("✅✅✅ %d STATION SENSORS CREATED AND ADDED!", len(sensors))
+        _LOGGER.info("%d station sensors created", len(sensors))
     else:
-        _LOGGER.warning("⚠️ No stations found to create sensors")
+        _LOGGER.warning("No stations found to create sensors")
+
+
+def _extract_fuel_data(record: dict) -> dict:
+    """Pull every '<fuel>_prix' / '<fuel>_maj' pair present in the record.
+
+    The government dataset exposes one price column and one update-timestamp
+    column per fuel (e.g. gazole_prix / gazole_maj, sp95_prix / sp95_maj).
+    Extracting by suffix instead of a hardcoded fuel list makes this robust
+    to fuels being added/renamed on the source side.
+    """
+    prices = {}
+    dates = {}
+    for key, value in record.items():
+        if value in (None, ""):
+            continue
+        if key.endswith("_prix"):
+            fuel = key[: -len("_prix")]
+            prices[fuel] = value
+        elif key.endswith("_maj"):
+            fuel = key[: -len("_maj")]
+            dates[fuel] = value
+    return {"prices": prices, "dates": dates}
 
 
 class StationSensor(CoordinatorEntity, SensorEntity):
@@ -63,7 +76,6 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._index = index
-
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_station_{index}"
         self._attr_name = f"Station {index}"
 
@@ -71,11 +83,9 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         """Get current station data from coordinator."""
         if not self.coordinator.last_update_success:
             return {}
-
         stations = self.coordinator.data.get("stations", [])
         if self._index > len(stations) or self._index < 1:
             return {}
-
         return stations[self._index - 1]  # Convert 1-indexed to 0-indexed
 
     @property
@@ -83,48 +93,43 @@ class StationSensor(CoordinatorEntity, SensorEntity):
         """Return the state - station address."""
         if not self.coordinator.last_update_success:
             return "error"
-
         station = self._get_station()
         if not station:
             return "error"
-
-        fields = station.get("fields", {})
-        cp = fields.get("cp", "")
-        ville = fields.get("ville", "")
+        cp = station.get("cp", "")
+        ville = station.get("ville", "")
         return f"{cp} {ville}".strip()
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Return attributes with full station details."""
+        """Return attributes with full station details, including per-fuel price + date."""
         if not self.coordinator.last_update_success:
             return {"error": "No data"}
-
         station = self._get_station()
         if not station:
             return {"error": "Station not found"}
 
-        fields = station.get("fields", {})
-
-        # Format last update time
-        last_updated = "N/A"
-        if self.coordinator.last_update_success_time:
-            last_updated = self.coordinator.last_update_success_time.strftime("%d/%m/%Y %H:%M:%S")
+        fuel_data = _extract_fuel_data(station)
 
         attrs = {
-            "name": fields.get("nom", "N/A"),
-            "address": fields.get("adresse", "N/A"),
-            "postal_code": fields.get("cp", "N/A"),
-            "city": fields.get("ville", "N/A"),
-            "distance_m": f"{fields.get('distance', 0):.0f}",
-            "latitude": fields.get("latitude", "N/A"),
-            "longitude": fields.get("longitude", "N/A"),
-            "last_updated": last_updated,
+            "name": station.get("nom") or station.get("adresse", "N/A"),
+            "address": station.get("adresse", "N/A"),
+            "postal_code": station.get("cp", "N/A"),
+            "city": station.get("ville", "N/A"),
+            "latitude": station.get("latitude", "N/A"),
+            "longitude": station.get("longitude", "N/A"),
             "index": self._index,
         }
+
+        # prix_gazole, prix_sp95, ... / date_gazole, date_sp95, ...
+        for fuel, price in fuel_data["prices"].items():
+            attrs[f"prix_{fuel}"] = price
+        for fuel, maj in fuel_data["dates"].items():
+            attrs[f"date_{fuel}"] = maj
 
         return attrs
 
     @property
     def icon(self) -> str:
         """Return the icon."""
-        return "mdi:gas-cylinder"
+        return "mdi:gas-station"
