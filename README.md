@@ -12,6 +12,22 @@ Intégration Home Assistant pour récupérer les prix des carburants en France d
 
 ## Installation
 
+### Via HACS (recommandé)
+
+Ce dépôt n'est pas dans le magasin par défaut de HACS, il faut donc l'ajouter comme **dépôt personnalisé** :
+
+1. Ouvrez **HACS** dans la barre latérale de Home Assistant
+2. Cliquez sur les **⋮** (trois points) en haut à droite → **Dépôts personnalisés**
+3. Collez l'URL du dépôt : `https://github.com/titof2375/prix_carburants_fr`
+4. Choisissez le type **Intégration**, puis cliquez sur **Ajouter**
+5. Le dépôt "Prix des Carburants France" apparaît maintenant dans la liste HACS — cliquez dessus puis sur **Télécharger** (Download)
+6. **Redémarrez Home Assistant**
+7. Allez dans **Paramètres → Appareils et services → Ajouter une intégration**, recherchez **"Prix Carburants France"** et suivez le formulaire de configuration
+
+Pour les mises à jour futures : HACS détecte automatiquement les nouvelles releases de ce dépôt (puisqu'il est déjà ajouté en dépôt personnalisé) — il suffit d'aller dans HACS, ouvrir l'intégration, et cliquer sur **Mettre à jour** quand une nouvelle version est proposée, puis redémarrer Home Assistant.
+
+### Installation manuelle (alternative)
+
 1. **Copiez le dossier** `prix_carburants_fr` dans votre dossier Home Assistant :
 
    ```
