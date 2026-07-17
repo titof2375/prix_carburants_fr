@@ -42,6 +42,24 @@ async def async_setup_entry(
         _LOGGER.warning("No stations found to create sensors")
 
 
+def _to_decimal_degrees(value) -> str:
+    """Convert a raw PTV_GEODECIMAL coordinate to standard decimal degrees.
+
+    The government dataset's raw latitude/longitude columns are in
+    PTV_GEODECIMAL format (decimal degrees x 100000, e.g. 4725741 for
+    47.25741). Values already in a plausible -180..180 range are left
+    untouched, so this is safe even if a given export already uses real
+    decimal degrees.
+    """
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return value
+    if abs(num) > 180:
+        num = num / 100000
+    return str(num)
+
+
 def _extract_fuel_data(record: dict) -> dict:
     """Pull every '<fuel>_prix' / '<fuel>_maj' pair present in the record.
 
@@ -116,8 +134,8 @@ class StationSensor(CoordinatorEntity, SensorEntity):
             "address": station.get("adresse", "N/A"),
             "postal_code": station.get("cp", "N/A"),
             "city": station.get("ville", "N/A"),
-            "latitude": station.get("latitude", "N/A"),
-            "longitude": station.get("longitude", "N/A"),
+            "latitude": _to_decimal_degrees(station.get("latitude", "N/A")),
+            "longitude": _to_decimal_degrees(station.get("longitude", "N/A")),
             "index": self._index,
         }
 
