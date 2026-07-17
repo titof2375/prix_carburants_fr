@@ -81,8 +81,18 @@ class PrixCarburantsFRCoordinator(DataUpdateCoordinator):
             _LOGGER.info("Fetching stations from %.4f, %.4f", lat, lon)
 
             async with aiohttp.ClientSession() as session:
+                # L'API v2.1 (Opendatasoft) n'honore pas le paramètre legacy
+                # "geofilter.distance" (il est silencieusement ignoré, ce qui
+                # renvoyait des stations n'importe où en France). Le filtre
+                # géographique se fait désormais via une clause ODSQL "where"
+                # avec la fonction within_distance(), et le tri par distance
+                # via "order_by". Le nom du champ géographique ("geom" ici)
+                # est à vérifier contre le schéma réel du jeu de données si
+                # cette requête ne renvoie aucun résultat.
+                point = f"geom'POINT({lon} {lat})'"
                 params = {
-                    "geofilter.distance": f"{lat},{lon},{rayon_km * 1000}",
+                    "where": f"within_distance(geom, {point}, {rayon_km}km)",
+                    "order_by": f"distance(geom, {point}) ASC",
                     "limit": nb_stations,
                 }
                 async with session.get(
