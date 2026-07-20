@@ -28,18 +28,39 @@ async def async_setup_entry(
         _LOGGER.error("Coordinator is None")
         return
 
-    sensors = []
-    if coordinator.last_update_success:
-        stations = coordinator.data.get("stations", [])
-        _LOGGER.debug("Creating %d station sensors...", len(stations))
-        for i, station in enumerate(stations, 1):
-            sensors.append(StationSensor(coordinator, entry.entry_id, i))
+    # NOTE: le premier refresh du coordinateur a lieu tres tot au demarrage
+    # de HA, souvent AVANT que l'entite device_tracker suivie ne soit
+    # chargee. Dans ce cas coordinator.data['stations'] est vide a cet
+    # instant precis. Plutot que de ne creer les capteurs qu'une seule fois
+    # ici (ce qui laissait l'integration sans capteur jusqu'a un rechargement
+    # manuel), on ajoute un listener qui cree les capteurs manquants des que
+    # le coordinateur recoit des donnees valides (prochain refresh planifie
+    # ou mise a jour ulterieure), sans attendre un reload de l'integration.
+    added_count = 0
 
-    if sensors:
-        async_add_entities(sensors, True)
-        _LOGGER.info("%d station sensors created", len(sensors))
-    else:
-        _LOGGER.warning("No stations found to create sensors")
+    def _add_new_sensors() -> None:
+        nonlocal added_count
+        if not coordinator.last_update_success:
+            return
+        stations = coordinator.data.get("stations", [])
+        if len(stations) <= added_count:
+            return
+        new_sensors = [
+            StationSensor(coordinator, entry.entry_id, i)
+            for i in range(added_count + 1, len(stations) + 1)
+        ]
+        async_add_entities(new_sensors, True)
+        _LOGGER.info("%d station sensors created", len(new_sensors))
+        added_count = len(stations)
+
+    _add_new_sensors()
+    if added_count == 0:
+        _LOGGER.warning(
+            "No stations found yet to create sensors; will retry automatically "
+            "when the coordinator next receives data (no manual reload needed)"
+        )
+
+    entry.async_on_unload(coordinator.async_add_listener(_add_new_sensors))
 
 
 def _to_decimal_degrees(value) -> str:
