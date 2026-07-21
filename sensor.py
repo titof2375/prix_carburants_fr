@@ -40,7 +40,10 @@ async def async_setup_entry(
 
     def _add_new_sensors() -> None:
         nonlocal added_count
-        if not coordinator.last_update_success:
+        if coordinator.data is None or not coordinator.last_update_success:
+            # No refresh has completed yet (e.g. it's still waiting for
+            # HA to fully start) - nothing to create sensors from yet,
+            # the listener below will call us again once data arrives.
             return
         stations = coordinator.data.get("stations", [])
         if len(stations) <= added_count:
