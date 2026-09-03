@@ -1,5 +1,6 @@
 """Carburants Prix integration."""
 import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant
@@ -16,25 +17,25 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor"]
 
-_LOGGER.warning("⚠️ MODULE LOADED: prix_carburants_fr")
+_LOGGER.debug("Module loaded: prix_carburants_fr")
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up component."""
-    _LOGGER.warning("⚠️ async_setup CALLED")
+    _LOGGER.debug("async_setup called")
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up entry."""
-    _LOGGER.warning("⚠️⚠️⚠️ async_setup_entry CALLED for %s", entry.entry_id)
+    _LOGGER.debug("async_setup_entry called for %s", entry.entry_id)
 
     try:
         # Create coordinator
-        _LOGGER.warning("📍 Creating coordinator...")
+        _LOGGER.debug("Creating coordinator...")
         coordinator = PrixCarburantsFRCoordinator(hass, entry.data)
-        _LOGGER.warning("✅ Coordinator created")
+        _LOGGER.debug("Coordinator created")
 
         # Store coordinator in entry.runtime_data (Home Assistant way!)
         entry.runtime_data = {"coordinator": coordinator}
@@ -47,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Forward to platforms right away: sensor.py already knows how to
         # create its sensors later via a coordinator listener, so the
         # platform can be set up before any data exists.
-        _LOGGER.warning("⏭️ Forwarding to platforms...")
+        _LOGGER.debug("Forwarding to platforms...")
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         # First refresh: at cold boot, device_tracker entities restored by
@@ -62,9 +63,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Not a cold boot (e.g. manual integration reload) -> the entry
             # is still in SETUP_IN_PROGRESS here, so first_refresh is valid.
             try:
-                _LOGGER.warning("🔄 Starting first refresh...")
+                _LOGGER.debug("Starting first refresh...")
                 await coordinator.async_config_entry_first_refresh()
-                _LOGGER.warning("✅ First refresh OK")
+                _LOGGER.debug("First refresh OK")
             except Exception as err:
                 _LOGGER.error("❌ First refresh failed: %s", err)
         else:
@@ -76,9 +77,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # listener exactly the same way.
             async def _do_refresh(_event=None) -> None:
                 try:
-                    _LOGGER.warning("🔄 Starting delayed refresh (HA fully started)...")
+                    _LOGGER.debug("Starting delayed refresh (HA fully started)...")
                     await coordinator.async_refresh()
-                    _LOGGER.warning("✅ Delayed refresh OK")
+                    _LOGGER.debug("Delayed refresh OK")
                 except Exception as err:
                     _LOGGER.error("❌ Delayed refresh failed: %s", err)
 
@@ -86,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _do_refresh)
             )
 
-        _LOGGER.warning("✅ SETUP COMPLETE!")
+        _LOGGER.debug("Setup complete")
         return True
 
     except Exception as err:
